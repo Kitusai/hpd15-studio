@@ -1,0 +1,40 @@
+{
+  "name": "hpd15-studio-v2",
+  "productName": "HPD-15 Studio V2",
+  "version": "2.7.0",
+  "description": "Librarian et Editor pour Roland HandSonic HPD-15",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --mac --universal"
+  },
+  "keywords": [
+    "Roland",
+    "HandSonic",
+    "HPD-15",
+    "MIDI",
+    "Electron"
+  ],
+  "author": "Kitusai",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.kitusai.hpd15studiov2",
+    "directories": {
+      "output": "dist"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.music"
+    },
+    "files": [
+      "main.js",
+      "index.html",
+      "package.json"
+    ]
+  }
+}

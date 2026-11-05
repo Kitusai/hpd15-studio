@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Roland HandSonic HPD-15 Set & Preset Librarian - v2.7</title>
+  <style>
+    :root {
+      --bg: #121518;
+      --panel: #1b1f24;
+      --panel-border: #2c313a;
+      --accent: #ff9900;
+      --accent-hover: #ffb84d;
+      --text: #e6edf3;
+      --text-dim: #8b949e;
+      --pad-bg: #272c34;
+      --pad-active: #ff9900;
+      --pad-hit: #ffe680;
+      --pad-stroke: #121518;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+
+    header { display: flex; justify-content: space-between; align-items: center; background: var(--panel); padding: 10px 16px; border-radius: 8px; border: 1px solid var(--panel-border); flex-wrap: wrap; gap: 10px; }
+    .header-section { display: flex; gap: 10px; align-items: center; }
+    
+    select, input[type="text"], input[type="number"], textarea, button { background: #262c35; color: var(--text); border: 1px solid var(--panel-border); padding: 6px 10px; border-radius: 6px; font-size: 13px; outline: none; }
+    select:focus, input[type="text"]:focus, input[type="number"]:focus, textarea:focus { border-color: var(--accent); }
+    button { cursor: pointer; background: var(--accent); color: #121518; font-weight: 600; border: none; padding: 7px 12px; border-radius: 6px; }
+    button:hover { background: var(--accent-hover); }
+    button.btn-sec { background: #2b313c; color: var(--text); border: 1px solid var(--panel-border); }
+    button.btn-sec:hover { background: #373f4d; }
+
+    .nav-tabs { display: flex; gap: 8px; border-bottom: 1px solid var(--panel-border); padding-bottom: 8px; }
+    .tab-btn { background: transparent; color: var(--text-dim); border: none; padding: 8px 16px; font-size: 14px; border-radius: 6px; cursor: pointer; }
+    .tab-btn.active { background: var(--panel); color: var(--accent); font-weight: bold; border: 1px solid var(--panel-border); border-bottom-color: var(--panel); }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: grid; }
+
+    .main-layout { grid-template-columns: 460px 1fr; gap: 20px; align-items: start; }
+    .panel-card { background: var(--panel); border: 1px solid var(--panel-border); border-radius: 8px; padding: 16px; }
+    h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-dim); margin-bottom: 12px; border-bottom: 1px solid var(--panel-border); padding-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+
+    .surface-container { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    svg { width: 420px; height: 420px; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.5)); }
+    .pad-sector { fill: var(--pad-bg); stroke: var(--pad-stroke); stroke-width: 3; cursor: pointer; transition: fill 0.1s ease; }
+    .pad-sector:hover { fill: #363d47; }
+    .pad-sector.selected { fill: var(--pad-active); }
+    .pad-sector.hit-flash { fill: var(--pad-hit) !important; transition: none; }
+    .pad-label { fill: #ffffff; font-size: 11px; font-weight: bold; pointer-events: none; text-anchor: middle; dominant-baseline: central; }
+
+    .ribbon-rect { fill: #20242a; stroke: var(--panel-border); stroke-width: 2; cursor: pointer; transition: stroke 0.15s ease, fill 0.15s ease; }
+    .ribbon-rect.selected { stroke: var(--accent) !important; stroke-width: 4px !important; fill: #4d2e00 !important; }
+    .ribbon-rect.hit-flash { fill: var(--pad-hit) !important; stroke: var(--pad-hit) !important; transition: none !important; }
+
+    .dbeam-area { fill: #1a1e23; stroke: var(--panel-border); stroke-width: 2; rx: 12; cursor: pointer; transition: stroke 0.15s ease, fill 0.15s ease; }
+    .dbeam-area.selected { stroke: var(--accent) !important; stroke-width: 4px !important; fill: #4d2e00 !important; }
+    .dbeam-area.hit-flash { fill: var(--pad-hit) !important; stroke: var(--pad-hit) !important; transition: none !important; }
+
+    .params-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
+    .param-box { display: flex; flex-direction: column; gap: 4px; }
+    .param-box label { font-size: 12px; color: var(--text-dim); display: flex; justify-content: space-between; }
+    .param-box label span { color: var(--accent); font-weight: 600; }
+    .param-box small { font-size: 10px; color: #6e7681; }
+    input[type="range"] { accent-color: var(--accent); width: 100%; cursor: pointer; }
+
+    .overview-dual-container { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    table.overview-table { width: 100%; border-collapse: collapse; font-size: 11px; text-align: left; }
+    table.overview-table th { background: #262c35; color: var(--text-dim); padding: 5px 8px; font-weight: 600; }
+    table.overview-table td { padding: 5px 8px; border-bottom: 1px solid #232830; }
+    table.overview-table tr { cursor: pointer; transition: background 0.1s; }
+    table.overview-table tr:hover { background: #232832; }
+    table.overview-table tr.active-row { background: #382c1e; font-weight: bold; color: var(--accent); }
+
+    #tab-librarian { display: none; flex-direction: column; gap: 14px; }
+    #tab-librarian.active { display: flex; }
+    .lib-form-grid { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 16px; align-items: start; }
+
+    .sets-table-wrap { max-height: 480px; overflow-y: auto; border: 1px solid var(--panel-border); border-radius: 6px; margin-top: 8px; }
+    table.sets-table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: left; }
+    table.sets-table th { background: #262c35; color: var(--text-dim); padding: 8px 10px; position: sticky; top: 0; z-index: 1; }
+    table.sets-table td { padding: 8px 10px; border-bottom: 1px solid #232830; }
+    table.sets-table tr:hover { background: #232832; }
+
+    #log-container { display: flex; flex-direction: column; gap: 6px; }
+    #log { background: #0c0f12; color: #39d353; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 11px; padding: 10px; border-radius: 6px; height: 85px; overflow-y: auto; border: 1px solid var(--panel-border); }
+    #log.hidden { display: none; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-section">
+      <h1 style="font-size: 17px; font-weight: 700;">HPD-15 <span style="font-weight: 300; color: var(--accent);">STUDIO V2</span></h1>
+      <select id="midiOutSelect"><option value="">Sortie MIDI...</option></select>
+      <select id="midiInSelect"><option value="">Entrée MIDI...</option></select>
+      <button id="btnInitMidi">Connecter</button>
+    </div>
+
+    <!-- Tempo direct -->
+    <div class="header-section" style="background: #14171c; padding: 5px 10px; border-radius: 6px; border: 1px solid var(--panel-border);">
+      <label style="font-size: 11px; color: var(--text-dim); font-weight: bold;">TEMPO :</label>
+      <input type="number" id="headerTempo" min="20" max="260" value="120" style="width: 70px;">
+      <span style="font-size: 11px; color: var(--accent); font-weight: 600;">BPM</span>
+    </div>
+
+    <!-- Sélecteur rapide & Bouton Sync -->
+    <div class="header-section" style="background: #14171c; padding: 5px 10px; border-radius: 6px; border: 1px solid var(--panel-border);">
+      <label style="font-size: 11px; color: var(--text-dim); font-weight: bold;">CHOIX KIT :</label>
+      <select id="selPatchType">
+        <option value="PRESET" selected>Preset (Usine)</option>
+        <option value="USER">User (Utilisateur)</option>
+      </select>
+      <select id="selPatchGroup" style="width: 110px;"></select>
+      <select id="selPatchItem" style="width: 125px;"></select>
+      <button id="btnLoadPatch" style="padding: 6px 10px;">Charger Kit</button>
+      <button id="btnSyncFromHPD" class="btn-sec" title="Rapatrier les paramètres réels du kit actif via SysEx RQ1">⟳ Sync</button>
+    </div>
+  </header>
+
+  <div class="nav-tabs">
+    <button id="btnTabEditor" class="tab-btn active" onclick="switchTab('tab-editor')">Pads & Instruments</button>
+    <button id="btnTabEffects" class="tab-btn" onclick="switchTab('tab-effects')">Effets (Reverb & Multi-FX)</button>
+    <button id="btnTabLibrarian" class="tab-btn" onclick="switchTab('tab-librarian')">Bibliothèque de Sets (JSON)</button>
+  </div>
+
+  <!-- ONGLET 1 : ÉDITEUR PADS -->
+  <div id="tab-editor" class="tab-content active main-layout">
+    <div class="panel-card surface-container">
+      <h2>Surface Interactive</h2>
+      <svg viewBox="0 0 440 440">
+        <rect id="pad-DB" class="dbeam-area" x="150" y="8" width="140" height="26" rx="13"></rect>
+        <text x="220" y="22" class="pad-label" style="font-size: 10px;">D-BEAM</text>
+
+        <rect id="pad-RL" class="ribbon-rect" x="8" y="100" width="30" height="240" rx="4"></rect>
+        <text x="23" y="220" class="pad-label" style="writing-mode: vertical-rl;">RUBAN G</text>
+
+        <rect id="pad-RR" class="ribbon-rect" x="402" y="100" width="30" height="240" rx="4"></rect>
+        <text x="417" y="220" class="pad-label" style="writing-mode: vertical-rl;">RUBAN D</text>
+
+        <g id="pads-group" transform="translate(220, 240)">
+          <path id="pad-B1" class="pad-sector" d="M -150,0 A 150 150 0 0 1 -144,-42 L -115,-34 A 120 120 0 0 0 -120,0 Z"></path>
+          <path id="pad-B2" class="pad-sector" d="M -144,-42 A 150 150 0 0 1 -128,-78 L -102,-63 A 120 120 0 0 0 -115,-34 Z"></path>
+          <path id="pad-B3" class="pad-sector" d="M -128,-78 A 150 150 0 0 1 -102,-110 L -82,-88 A 120 120 0 0 0 -102,-63 Z"></path>
+          <path id="pad-B4" class="pad-sector" d="M -102,-110 A 150 150 0 0 1 -69,-133 L -55,-106 A 120 120 0 0 0 -82,-88 Z"></path>
+          <path id="pad-B5" class="pad-sector" d="M -69,-133 A 150 150 0 0 1 -31,-147 L -25,-117 A 120 120 0 0 0 -55,-106 Z"></path>
+
+          <path id="pad-C1" class="pad-sector" d="M 31,-147 A 150 150 0 0 1 69,-133 L 55,-106 A 120 120 0 0 0 25,-117 Z"></path>
+          <path id="pad-C2" class="pad-sector" d="M 69,-133 A 150 150 0 0 1 102,-110 L 82,-88 A 120 120 0 0 0 55,-106 Z"></path>
+          <path id="pad-C3" class="pad-sector" d="M 102,-110 A 150 150 0 0 1 128,-78 L 102,-63 A 120 120 0 0 0 82,-88 Z"></path>
+          <path id="pad-C4" class="pad-sector" d="M 128,-78 A 150 150 0 0 1 144,-42 L 115,-34 A 120 120 0 0 0 102,-63 Z"></path>
+          <path id="pad-C5" class="pad-sector" d="M 144,-42 A 150 150 0 0 1 150,0 L 120,0 A 120 120 0 0 0 115,-34 Z"></path>
+
+          <path id="pad-A2" class="pad-sector" d="M -115,-34 A 120 120 0 0 1 0,-120 L 0,-38 A 38 38 0 0 0 -38,0 L -120,0 A 120 120 0 0 1 -115,-34 Z"></path>
+          <path id="pad-A4" class="pad-sector" d="M 0,-120 A 120 120 0 0 1 115,-34 L 120,0 L 38,0 A 38 38 0 0 0 0,-38 Z"></path>
+          <path id="pad-A1" class="pad-sector" d="M -120,0 L -38,0 A 38 38 0 0 1 0,38 L 0,150 A 150 150 0 0 1 -150,0 Z"></path>
+          <path id="pad-A5" class="pad-sector" d="M 0,38 A 38 38 0 0 1 38,0 L 120,0 L 150,0 A 150 150 0 0 1 0,150 Z"></path>
+          <circle id="pad-A3" class="pad-sector" cx="0" cy="0" r="35"></circle>
+
+          <text x="-65" y="65" class="pad-label">A1</text>
+          <text x="-60" y="-55" class="pad-label">A2</text>
+          <text x="0" y="0" class="pad-label">A3</text>
+          <text x="60" y="-55" class="pad-label">A4</text>
+          <text x="65" y="65" class="pad-label">A5</text>
+
+          <text x="-135" y="-18" class="pad-label" style="font-size: 9px;">B1</text>
+          <text x="-124" y="-58" class="pad-label" style="font-size: 9px;">B2</text>
+          <text x="-104" y="-92" class="pad-label" style="font-size: 9px;">B3</text>
+          <text x="-75" y="-118" class="pad-label" style="font-size: 9px;">B4</text>
+          <text x="-40" y="-134" class="pad-label" style="font-size: 9px;">B5</text>
+
+          <text x="40" y="-134" class="pad-label" style="font-size: 9px;">C1</text>
+          <text x="75" y="-118" class="pad-label" style="font-size: 9px;">C2</text>
+          <text x="104" y="-92" class="pad-label" style="font-size: 9px;">C3</text>
+          <text x="124" y="-58" class="pad-label" style="font-size: 9px;">C4</text>
+          <text x="135" y="-18" class="pad-label" style="font-size: 9px;">C5</text>
+        </g>
+      </svg>
+    </div>
+
+    <!-- Paramètres -->
+    <div class="panel-card">
+      <h2>Paramètres : <span id="currentPadTitle" style="color: var(--accent);">PAD A1</span></h2>
+      <div class="params-grid">
+
+        <div class="param-box" style="grid-column: 1 / -1;">
+          <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 6px;">
+            <input type="text" id="instSearch" placeholder="Rechercher parmi les 600 sons..." style="flex: 1;">
+            <select id="instCategoryFilter" style="width: 140px;">
+              <option value="ALL">Toutes familles</option>
+              <option value="Latin">Latin</option>
+              <option value="African">African</option>
+              <option value="Indian">Indian</option>
+              <option value="Asian">Asian</option>
+              <option value="Orch">Orchestral</option>
+              <option value="Drums">Drums</option>
+              <option value="Dance">Dance</option>
+              <option value="SFX">SFX</option>
+              <option value="Others">Others</option>
+            </select>
+          </div>
+          <select id="ctrl-inst" size="14" style="height: 280px;"></select>
+        </div>
+
+        <div class="param-box">
+          <label>Volume (Level) <span id="val-level">100</span></label>
+          <input type="range" id="ctrl-level" min="0" max="127" value="100" data-default="100">
+          <small>Double-clic pour réinitialiser (100)</small>
+        </div>
+
+        <div class="param-box">
+          <label>Pitch (-2400 à +2400 cents) <span id="val-pitch">0 cents</span></label>
+          <input type="range" id="ctrl-pitch" min="-2400" max="2400" value="0" step="5" data-default="0">
+          <small>Double-clic pour réinitialiser (0)</small>
+        </div>
+
+        <div class="param-box">
+          <label>Panoramique <span id="val-pan">Center</span></label>
+          <input type="range" id="ctrl-pan" min="1" max="127" value="64" data-default="64">
+          <small>Double-clic pour centrer</small>
+        </div>
+
+        <div class="param-box">
+          <label>Decay (-31 à +31) <span id="val-decay">0</span></label>
+          <input type="range" id="ctrl-decay" min="-31" max="31" value="0" data-default="0">
+          <small>Double-clic pour réinitialiser (0)</small>
+        </div>
+
+        <div class="param-box">
+          <label>Départ Réverbération <span id="val-reverb">40</span></label>
+          <input type="range" id="ctrl-reverb" min="0" max="127" value="40" data-default="40">
+          <small>Double-clic pour réinitialiser (40)</small>
+        </div>
+
+        <div class="param-box">
+          <label>Routage Multi-FX <span id="val-mfx">ON</span></label>
+          <select id="ctrl-mfx">
+            <option value="1">ON (Traverser le M-FX)</option>
+            <option value="0">OFF (Direct vers Sorties)</option>
+          </select>
+          <small>Active l'application des multi-effets sur ce pad</small>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ONGLET 2 : EFFETS -->
+  <div id="tab-effects" class="tab-content" style="grid-template-columns: 1fr 1fr; gap: 20px;">
+    <div class="panel-card">
+      <h2>Section Réverbération</h2>
+      <div class="params-grid">
+        <div class="param-box" style="grid-column: 1 / -1;">
+          <label>Algorithme Réverb</label>
+          <select id="fx-reverb-algo">
+            <option value="0">OFF</option>
+            <option value="1">Room 1</option>
+            <option value="2">Room 2</option>
+            <option value="3">Stage</option>
+            <option value="4">Plate</option>
+            <option value="5" selected>Hall 1</option>
+            <option value="6">Hall 2</option>
+            <option value="7">Delay</option>
+            <option value="8">Pan Delay</option>
+          </select>
+        </div>
+        <div class="param-box">
+          <label>Niveau Réverb <span id="val-fx-rev-level">64</span></label>
+          <input type="range" id="fx-rev-level" min="0" max="127" value="64" data-default="64">
+        </div>
+        <div class="param-box">
+          <label>Temps Réverb / Délai <span id="val-fx-rev-time">70</span></label>
+          <input type="range" id="fx-rev-time" min="0" max="127" value="70" data-default="70">
+        </div>
+        <div class="param-box">
+          <label>HF Damp</label>
+          <select id="fx-rev-hfdamp">
+            <option value="0">200 Hz</option><option value="1">250 Hz</option><option value="2">315 Hz</option>
+            <option value="3">400 Hz</option><option value="4">500 Hz</option><option value="5">630 Hz</option>
+            <option value="6">800 Hz</option><option value="7">1 kHz</option><option value="8">1.25 kHz</option>
+            <option value="9">1.6 kHz</option><option value="10">2 kHz</option><option value="11">2.5 kHz</option>
+            <option value="12">3.15 kHz</option><option value="13">4 kHz</option><option value="14">5 kHz</option>
+            <option value="15">6.3 kHz</option><option value="16">8 kHz</option><option value="17" selected>THRU</option>
+          </select>
+        </div>
+        <div class="param-box">
+          <label>Feedback Délai <span id="val-fx-rev-feedback">0</span></label>
+          <input type="range" id="fx-rev-feedback" min="0" max="127" value="0" data-default="0">
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-card">
+      <h2>Section Multi-Effets (M-FX)</h2>
+      <div class="params-grid">
+        <div class="param-box" style="grid-column: 1 / -1;">
+          <label>Interrupteur Global M-FX</label>
+          <select id="fx-mfx-switch">
+            <option value="1" selected>ON (Effet activé)</option>
+            <option value="0">OFF (Bypass)</option>
+          </select>
+        </div>
+        <div class="param-box" style="grid-column: 1 / -1;">
+          <label>Algorithme Multi-FX</label>
+          <select id="fx-mfx-algo"></select>
+        </div>
+        <div class="param-box">
+          <label>Volume Sortie M-FX <span id="val-fx-mfx-outvol">100</span></label>
+          <input type="range" id="fx-mfx-outvol" min="0" max="127" value="100" data-default="100">
+        </div>
+        <div class="param-box">
+          <label>M-FX vers Réverb <span id="val-fx-mfx-revsend">40</span></label>
+          <input type="range" id="fx-mfx-revsend" min="0" max="127" value="40" data-default="40">
+        </div>
+        <div class="param-box">
+          <label>Paramètre 1 (Ctrl 1) <span id="val-fx-mfx-p1">64</span></label>
+          <input type="range" id="fx-mfx-p1" min="0" max="127" value="64" data-default="64">
+        </div>
+        <div class="param-box">
+          <label>Paramètre 2 (Ctrl 2) <span id="val-fx-mfx-p2">64</span></label>
+          <input type="range" id="fx-mfx-p2" min="0" max="127" value="64" data-default="64">
+        </div>
+        <div class="param-box">
+          <label>Paramètre 3 (Ctrl 3) <span id="val-fx-mfx-p3">64</span></label>
+          <input type="range" id="fx-mfx-p3" min="0" max="127" value="64" data-default="64">
+        </div>
+        <div class="param-box">
+          <label>Paramètre 4 (Ctrl 4) <span id="val-fx-mfx-p4">64</span></label>
+          <input type="range" id="fx-mfx-p4" min="0" max="127" value="64" data-default="64">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ONGLET 3 : BIBLIOTHÈQUE DE SETS -->
+  <div id="tab-librarian" class="tab-content">
+    <div class="panel-card" style="display: flex; flex-direction: column; gap: 14px;">
+      <h2>Gestion du Set Actif & Fichiers</h2>
+      
+      <div class="lib-form-grid">
+        <div class="param-box">
+          <label>Répertoire des Sets :</label>
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <input type="text" id="libDirPath" readonly style="flex:1; font-size:12px; color:var(--text-dim);" value="Non défini">
+            <button id="btnBrowseDir" class="btn-sec" style="padding: 6px 12px; white-space: nowrap;">Choisir...</button>
+          </div>
+          <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <div style="flex: 1;" class="param-box">
+              <label>Nom du Set (max 30 car.) :</label>
+              <input type="text" id="setNameInput" maxlength="30" value="Nouveau Set">
+            </div>
+            <div style="width: 100px;" class="param-box">
+              <label>Tempo :</label>
+              <input type="number" id="setTempoInput" min="20" max="260" value="120">
+            </div>
+          </div>
+        </div>
+
+        <div class="param-box">
+          <label>Notes & Contexte (300 car. max) :</label>
+          <textarea id="setNotesInput" maxlength="300" style="height: 75px; resize: none;"></textarea>
+          <small style="text-align: right;"><span id="notesCharCount">0</span> / 300</small>
+        </div>
+
+        <div class="param-box" style="display: flex; flex-direction: column; gap: 8px; justify-content: center; height: 100%;">
+          <button id="btnSaveSetLocal" style="padding: 10px; font-weight: bold;">
+            Enregistrer Set (.JSON)
+          </button>
+          <div style="display: flex; gap: 8px;">
+            <button id="btnSaveAsNative" class="btn-sec" style="flex: 1; font-size: 11px;">Enregistrer sous...</button>
+            <button id="btnOpenNative" class="btn-sec" style="flex: 1; font-size: 11px;">Ouvrir fichier...</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-card" style="display: flex; flex-direction: column; gap: 10px;">
+      <h2>
+        <span>Sets disponibles dans le dossier</span>
+        <button id="btnRefreshLib" class="btn-sec" style="font-size: 11px; padding: 4px 10px;">⟳ Actualiser</button>
+      </h2>
+
+      <div class="sets-table-wrap">
+        <table class="sets-table">
+          <thead>
+            <tr>
+              <th style="width: 22%;">Nom du Set</th>
+              <th style="width: 10%;">Tempo</th>
+              <th style="width: 34%;">Notes</th>
+              <th style="width: 24%;">Instruments</th>
+              <th style="width: 10%; text-align: center;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="setsTableBody">
+            <tr><td colspan="5" style="text-align:center; color:var(--text-dim);">Veuillez choisir un dossier de travail.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- RÉSUMÉ INFORMATIF EN 2 COLONNES (Onglets 1 & 2) -->
+  <div class="panel-card" id="overview-card">
+    <h2>Résumé Informatif du Set en cours (18 Zones)</h2>
+    <div class="overview-dual-container">
+      <table class="overview-table">
+        <thead>
+          <tr>
+            <th>Zone</th>
+            <th>Code</th>
+            <th>Instrument Roland</th>
+            <th>Niv</th>
+            <th>Pan</th>
+            <th>Pitch</th>
+            <th>Rev</th>
+            <th>MFX</th>
+          </tr>
+        </thead>
+        <tbody id="overviewTbodyLeft"></tbody>
+      </table>
+
+      <table class="overview-table">
+        <thead>
+          <tr>
+            <th>Zone</th>
+            <th>Code</th>
+            <th>Instrument Roland</th>
+            <th>Niv</th>
+            <th>Pan</th>
+            <th>Pitch</th>
+            <th>Rev</th>
+            <th>MFX</th>
+          </tr>
+        </thead>
+        <tbody id="overviewTbodyRight"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- MONITEUR MIDI -->
+  <div class="panel-card" id="log-container">
+    <h2>
+      <span>Moniteur MIDI & SysEx</span>
+      <button id="btnToggleLog" class="btn-sec" style="font-size: 11px; padding: 4px 8px;">Masquer</button>
+    </h2>
+    <div id="log">Prêt.</div>
+  </div>
+
+  <script>
+    let fs = null;
+    let path = null;
+    let ipcRenderer = null;
+    try {
+      fs = require('fs');
+      path = require('path');
+      ipcRenderer = require('electron').ipcRenderer;
+    } catch (e) {
+      console.warn("Environnement Node/Electron non détecté.");
+    }
+
+    // --- 1. CATALOGUE 600 INSTRUMENTS ROLAND HPD-15 ---
+    const ALL_INSTRUMENTS = [];
+    const FAMILIES = [
+      { 
+        prefix: "L", cat: "Latin", 
+        names: [
+          "Bongo Hi","Bongo Hi/H","Bongo Hi/T","Bongo Hi Cls","Bng HiHndSlp","Bongo Lo","R-8 Bongo Hi","R-8 Bongo Lo",
+          "Conga Hi/H","Conga Hi/T","Conga Hi","CongaHiOpSlp","Conga Hi Cls","CongaHiClSlp","Conga HiHeel","Conga Hi Toe","Conga HiBass","Conga Slide",
+          "Conga Lo/H","Conga Lo/T","Conga Lo","CongaLoOpSlp","Conga Lo Cls","CongaLoClSlp","Conga LoHeel","Conga Lo Toe","Conga LoBass",
+          "R-8 Conga Hi","R-8Cng HiCls","R-8 Conga Lo","Cowbell 1","Cowbell 1 Mt","Cowbell 2","Cowbell 3","Claves 1","Claves 2",
+          "Guiro Long","Guiro Short","Guiro LngSht","Guiro 1notch","Maracas","Shaker 1","Shaker 2","Shaker 3","Tambourine 1","Tambourine 2",
+          "Timbale Hi","Timbale HiRm","Timble+Crash","Timbale Lo","Timbale LoRm","TimblHiPaila","TmblHiPilaMt","TimblLoPaila","TmblLoPilaMt",
+          "Timbl Hi Hnd","TimblHiHndMt","Timbl Lo Hnd","TimblLoHndMt","Vibra-slap","Steel Drum 1","Steel Drum 2",
+          "Agogo 1 Hi","Agogo 1 Lo","Agogo 1 HiLo","Agogo 2 Hi","Agogo 2 Lo","Agogo 2 HiLo","Agogo 3","Cabasa",
+          "Cuica 1","Cuica 1 Open","Cuica 1 Mut1","Cuica 1 Mut2","Cuica 2","Cuica 2 Open","Cuica 2 Mut1","Cuica 2 Mut2",
+          "Pandeiro","Pandeiro Mut","Pandeiro Slp","Pandeiro Lo","Pand Lo Mut","Pand Lo Slp",
+          "R-8 Surdo","R-8 Surdo Mt","R-8 Surdo Rm","Surdo","Surdo Mute","Tamborim","Tamborim Mut","Tamborim Slp","Tamborim 2",
+          "Whistle Long","Whistle Shrt","Whstl LngSht","Caxixi","Berimbau","Berimbau Mut",
+          "Berimbau Up","Berimbau Dn","BerimbauUpDn","Caixa","Caixa Rim","Caixa Roll","Rain Stick","RainStk Soft",
+          "SambaBateria","Space Conga","SpaceCng Bas","E.Conga","E.Conga Bass","DR-55 Claves","CR-78 Cowbel","CR-78 MetalB",
+          "CR-78 Guiro","CR-78 Tambrn","CR-78 Maracs","CR-78 Bongo","CR-78 Claves","TR-808 Conga","TR-808 Clavs","TR-808 Marcs","TR-808 Cow"
+        ] 
+      },
+      { prefix: "F", cat: "African", names: ["Shekere","Djembe/H","Djembe/T","Djembe","Djembe Mute","Djembe Slap","Djembe Bass","SmallDjmb/H","SmallDjmb/T","Small Djembe","SmallDjmb Mt","SmallDjmbSlp","SmallDjmb Bs","TalkingDrm 1","TalkingDrm 2","TalkingDrm 3","Afro Drum 1","Afro Drum 2","Afro Dr Flam","Afro Dr Rttl","Metal Casta","PotDrm 1 Lo","PotDrm 1 Hi","PotDrm 1 Acc","PotDrm 2","PotDrm 2 Mut","PotDrm 2 Lng","PotDrm 2 Sht","PotDrm 3 Slp","PotDrm 3 Bas","PotDrm 3 BsE","Kalimba","Log Drum","Gyilli A","Gyilli D","Gyilli G","Gyilli C","Gyilli Hi G","Gyli GlissUp","Gyli GlissDn","Gyli GlsUpDn","Balaphone A","Balaphone F#","Balaphone E","Balaphone B","Balphn GlsUp","Balphn GlsDn","Balphn UpDn","Balaphone 2","Afro Zither","Afro Feet","Afro Stomp","Hand Drum","Hand Drum Bs","MonguDrm Hi","MngDrm Hi Bs","MonguDrm Lo","Clapstick","Boomerang","Bamboo","Bloom Bell"] },
+      { prefix: "I", cat: "Indian", names: ["Sarna Bell","Tabla Na","Tabla Tin","Tabla Tun","Tabla Ti","Tabla TinNa","Tabla TiNa","Tabla TunTin","Tabla 2 Te","Baya Slide","Baya Gin","Baya Ka","Baya Ge","Baya GeKa","Dholak Ga","Dholak Ta","Dholak Tun","Dholak Na","Dholak TunNa","Madal Da","Madal Din","Madal Ta","Madal DinTa","Khole","Dhol Ga","Dhol Slide","Dhol Ka","Dhol Da","Sitar","Sitar Gliss","Santoor Lowr","Santoor Uppr","Tambura","Tambura Dron","Bell Tree","Sagat Open","Sagat Closed","Sagat OpCls","Darbuka1 Dom","Darbuka1 Tak","Darbuka2","Doira Dun","Doira Tik","Doholla Dom","Doholla Sak","Doholla Tak","Doholla Roll","Doholla Stop","Dohol RolStp","Rek Dom","Rek Tek","Rek Open","Rek Trill","Bendir","Dawul","HmrDlcmr Lwr","HmrDlcmr Upr"] },
+      { prefix: "A", cat: "Asian", names: ["Biwa","Atarigane","Hyoshigi","Ohkawa","Tsuzumi Hi","Tsuzumi Lo","Shime Taiko1","Shime Taiko2","MatsuriTaiko","Matsuri TkRm","Buk","Buk Rim","JangGu","Jing","Jing Mute","Gengari","Gengari Mute","Ban Gu 1","Ban Gu 2","Ban Gu 3","Gu Roll","Gu High","Gu Roll-Stop","Tang Gu","Tang Gu Mute","Hu Yin Luo","HuYinLuo Mut","Nao Bo","Xiao Bo","Large TamTam","Large Gong","Small Gong","Bend Gong","Yang Qin","Finger Cym","Fingr Cym Mt","Rama Cymbal","Chenchen Opn","Chenchen Cls","Chenchn OpCl","Bali Cym Opn","Bali Cym Cls","BaliCym OpCl","Thai Gong","JawsHarp Opn","JawsHarp Wow","JawsHrp OpWo","Bonang","Gender","Saron","Angklung","Gamelan 1","Gamelan 2"] },
+      { prefix: "O", cat: "Orch", names: ["Sleigh Bell","Tree Chimes","Triangle","Triangle Mut","Castanets","Wood Block","WdBlock HiLo","Slapstick","Concert BsDr","Conc BsDrMut","Timpani","Perc Hit","Orch Hit 1","Orch Hit 2","DrmMaj Whstl","Glockenspiel","Vibraphone","Xylophone","Marimba 1","Marimba 2","Bass Marimba","Celesta","Tubular Bell","Glass","Iron Hammer"] },
+      { prefix: "R", cat: "Drums", names: ["Dry Hard Kik","Jazz Kick","Vintage Kick","26in Deep Kik","Wood Beatr K","HipHop Kick","Plastic Kick","Electronic K","TR-808 Kick","808 Boom Kik","TR-909 Kick","CR-78 Kick","Beech Snare","BeechS RmSht","Loose S Hrd","Loose S Rim","Concert Snr","Concert S Rol","Concrt S Buz","Hi Piccolo S","L.A. Snare","Brush Snare","Brush Rol S1","Brush Rol S2","Brush Swsh S","Brush Slp S1","Brush Slp S2","House Dopn'S","Swing Snare","Quinto Snare","Electronic S","TR-808 Snare","TR-909 Snare","CR-78 Snare","Amb CrossStk","Hall CrosStk","Stick Hit","Sticks","TR-808 Stick","TR-909 Stick","CR-78 Stick","Metal Stick","Vintage Tom1","Vintage Tom2","Dbl Head T 1","Dbl Head T 2","Room Tom 1","Room Tom 2","Brush Slp T1","Brush Slp T2","Electronic T","2-Tone ElecT","Bright ElecT","TR-808 Tom","TR-909 Tom","909 Whack T","Pure CHH","PureCHH Edge","Pure HalfOHH","Pure OHH","Tamburn CHH","Tamburn OHH","TR-808 CHH","808 CHH Edge","TR-808 OHH","808 OHH Edge","TR-909 CHH","TR-909 OHH","Pure Hi-Hat","13in Hi-Hat","Hand Cym HH","Tambourin HH","Maracas HH","Chenchen HH","TR-808 HiHat","TR-909 HiHat","Metal 808 HH","Metal 909 HH","Crash Cymbal","Chinese Cym","Szl ChineseC","Splash Cym 1","Splash Cym 2","Pgy Crash C1","Ride Cymbal","Ride Bell C","Ride X Bell","Sizzl Ride C","Sizzl Rd Bel","Pgy Ride Cym","Brush Ride C","Brsh Szl RdC","Hand Cymbals","Mallet Cymbl","TR-808 Cymbl","TR-606 Cymbl","Wheel Pedal","KickCymbal 1","KickCymbal 2"] },
+      { prefix: "D", cat: "Dance", names: ["TR-808 Clap","Hand Clap 1","Hand Clap 2","Hand Clap 3","Afro Clap","Scratch Push","Scratch Pull","ScrhPushPull","Scrch Stereo","Scr BsDr Psh","Scr BsDr Pul","Scr Bs PshPl","Jungle Cymbl","Dance Shaker","Trash body","Trash edge","Trash lid","Trash bottom","High-Q 1","High-Q 2","Rev High-Q","Air Blip","Techno Snap","Organ Chord","Dist Guitar","Auh Voice","Techno Chord","Techno Scene","Synth Hit","Distort Hit","Techno Hit","Philly Hit","Funk Hit","Funny Hit","Cuica Hit","Rev Cuica Ht","Thin Beef","Bounce","Dist Swish","PCM Press","Reverse Beat","Monster Drum","Can Drum","Jungle Rol K","Jungle Rol S"] },
+      { prefix: "S", cat: "SFX", names: ["Burt","Boing","Reverse Boing","Tom Noise","Laser","ReverseLaser","Toy Gun","Eddy","Congerin","Moment","Toy Chat","Second Tick","Drip","Click","Metronm Bell","Metronm Clk","R-8 Spark","Anvil","Chop","Metal 1","Metal 2","Crash","Shot 1","Shot 2","Shot 3","Shot 4","Noise Acc 1","Noise Acc 2","Noise Acc 3","Noise Acc 4","Random Noiz1","Random Noiz2","Random Noiz3","Random Noiz4","White Noise","Pink Noise","Rev Vibraslp","RevSitar Gls","Rev Bend Gng","Rev Voice K","Rev Voice S","Cabasa 1shot","Matsuri","Uut?","Drop","Emergency","Woody 1","Woody 2","Punch","Metallic Lid","Glass Crash","Door Close","Bomb","Reverse Bomb","Explosion","Thunder","Stream","Snaps","Foot Step","Human Whistl","Chiki!","Hey!","Voice Ahhh","Rev Voc Ahhh"] },
+      { prefix: "T", cat: "Others", names: ["Ac.Piano","E.Piano","60's EP","Soft FM EP","Clavinet","Even Bar","Organ","Nylon Guitar","Steel Guitar","Jazz Guitar","Clean Guitar","Muted Guitar","Pop Guitar","Funk Guitar","Overdrive Gt","Heavy Guitar","Muted DistGt","Rock Rhythm","Wah Gtr Dn 1","Wah Gtr Up 1","Wah Gtr Dn 2","Wah Gtr Up 2","Cut Gtr Dn","Cut Gtr Up","Gtr Scratch1","Rev Gtr Scr1","Gtr Scrach2","Rev Gtr Scr2","Bass Slide","Rev Bs Slide","Acoustic Bs","E.AcousticBs","Fingered Bs","Funk Bass","Pick Bass","Muted PickBs","Fretless Bs","Slap Bass","Synth Bass","TB-303 Bass","SH-101 Bass","Orch Strings","Syn Strings","OB Strings","Brass Hit L","Brass Hit S","Brass Hit LS","Brass Fall","Octave Brass","Poly Brass","Tenor Sax","Flute","Sine Wave","Saw Wave 1","Saw Wave 2","Square Wave","Buzzer","Beep","JU-2 Sub OSC","Poly OSC","Juno Rave","JP Hoover","Feedback Wav","Atmosphere","Syn Calliope","Fantasia","Thick Pad","80's PolySyn","Off"] }
+    ];
+
+    let currentIdx = 0;
+    FAMILIES.forEach(f => {
+      f.names.forEach((n, i) => {
+        let code = `${f.prefix}${(i + 1).toString().padStart(2, '0')}`;
+        if (f.prefix === "L" && i >= 99) {
+          code = `l${(i - 98).toString().padStart(2, '0')}`;
+        }
+        ALL_INSTRUMENTS.push({ id: currentIdx++, code: code, name: n, cat: f.cat });
+      });
+    });
+
+    const PRESET_GROUPS = [
+      { id: 1, name: "LATIN", count: 22, patches: ["Conga","Bongo","Timbales","LatinToys","CONGAbongo","TimbaleMix","Conga II","Bongo II","TimbalesII","BONGO-BRS-","TimbalSong","Steel Drum","Pandeiro","Surdo","ESCOLA","Berimbau","PandeiroII","Surdo II","Brazil Mix","Perc Echos","SpaceConga","808 Latin"] },
+      { id: 2, name: "AFRICAN", count: 17, patches: ["TalkingDrm","Djembe S","Djembe L","Frame Drum","Pot Drum","Kalimba","Log Drum","Balaphone","Gyilli","AfroZither","MonguDrum","AfricaToys","Gyilli&Cng","NaturePerc","GyliBalaph","TalkDrm II","PotDrum II"] },
+      { id: 3, name: "INDIAN", count: 18, patches: ["Tabla","Dholak","Madal","Dhol","DrmOfIndia","MadalTalan","Tabla II","Tabla III","TABLATIX","Sitar","SantoorMaj","SantoorMin","Tambura","Darabukka","Rek","Doholla","Doira","Turk-Mltry"] },
+      { id: 4, name: "ASIAN", count: 14, patches: ["JAPAN","MATSURI","CHINA","Yang Qin","Korean4Drm","Gamelan","JavaGameln","BaliGameln","Bali&Java","Gongs","Angklung","Bonang","Gender","Saron"] },
+      { id: 5, name: "ORCH", count: 11, patches: ["Vibraphone","Glockenspl","Xylophone","Marimba","Bs Marimba","Tubular Bel","Timpani","Orch Hit","LightOrch","OrchPerc","Aux Perc"] },
+      { id: 6, name: "DRUMS", count: 21, patches: ["Standard","Jazzbrush","Analog","TR-808","TR-909","Studio","Rock Stage","Swing","Brushes","Orch Set","Mexi-Set","Hi-Boy","Low&Dry","Jazz Mix","JzBrush&Bs","BluesClub","Drum&Horns","TechnoGate","FlangeDrms","JunkyDrums","Brush Box"] },
+      { id: 7, name: "DANCE", count: 24, patches: ["Clap&Scrch","FILTERED","Trash Beat","LatinHouse","Techey","TechDance","EthniDance","Cosmo 21","Industrial","UndaGround","StreetBeat","909-2000","AlienDance","TechNow","Sweep 808","Revolution","Backbeat","AmberWater","SynthDrums","Discotica","Dance 6","Lock Out","DanceMenu1","DanceMenu2"] },
+      { id: 8, name: "SFX", count: 13, patches: ["PsycoDrama","Forest","GrandBlue","NoiseSonic","ArpegPerc","CartoonFX","Silly FX","Rol&FiltMe","MetalMania","ChaosSoniq","SFX Menu 1","SFX Menu 2","SFX Menu 3"] },
+      { id: 9, name: "OTHERS", count: 12, patches: ["Laserwave","Heavy Gtr","Acous Bass","SH101 Bass","Flute","Syn String","Saw Wave","Juno Rave","Fantasia","Thick Pad","Calliope","Melody-808"] },
+      { id: 10, name: "LOOPS", count: 8, patches: ["Latin Loop","Samba Loop","AfricaLoop","IndianLoop","Asian Loop","FusionLoop","Dance Loop","Shot & Tap"] }
+    ];
+
+    const MFX_ALGORITHMS = [
+      "Stereo EQ", "CompLimiter", "Enhancer", "Spectrum", "Isolator", "DynamicFltr",
+      "Sustainer", "Overdrive", "Distortion", "Lo-Fi", "RingModltr", "Stereo Cho",
+      "TetraChorus", "Tremolo Cho", "Space D", "Stereo Fln", "StepFlanger", "Phaser",
+      "FbackPitch", "StereoDelay", "Mod Delay", "TimeCtrlDly", "3TapDlySht", "3TapDlyLng",
+      "4TapDlySht", "4TapDlyLng", "AdvanceRev", "GateReverb"
+    ];
+
+    const PAD_OFFSETS = {
+      'A1': 0x10, 'A2': 0x11, 'A3': 0x12, 'A4': 0x13, 'A5': 0x14,
+      'B1': 0x15, 'B2': 0x16, 'B3': 0x17, 'B4': 0x18, 'B5': 0x19,
+      'C1': 0x1A, 'C2': 0x1B, 'C3': 0x1C, 'C4': 0x1D, 'C5': 0x1E,
+      'RL': 0x21, 'RR': 0x22, 'DB': 0x20
+    };
+
+    const NOTE_TO_PAD = {
+      60: 'A1', 64: 'A2', 67: 'A3', 71: 'A4', 74: 'A5',
+      61: 'B1', 62: 'B2', 63: 'B3', 65: 'B4', 66: 'B5',
+      68: 'C1', 69: 'C2', 70: 'C3', 72: 'C4', 73: 'C5',
+      59: 'RL', 78: 'RR', 79: 'DB'
+    };
+
+    const DEFAULT_KIT_SOUNDS = {
+      'A1': 10, 'A2': 9,  'A3': 16, 'A4': 20, 'A5': 8,
+      'B1': 6,  'B2': 5,  'B3': 46, 'B4': 47, 'B5': 41,
+      'C1': 40, 'C2': 44, 'C3': 34, 'C4': 30, 'C5': 62,
+      'RL': 36, 'RR': 17, 'DB': 176
+    };
+
+    const currentKit = {
+      name: "Nouveau Set",
+      tempo: 120,
+      notes: "",
+      pads: {},
+      effects: {
+        reverb: { algo: 5, level: 64, time: 70, hfdamp: 17, feedback: 0 },
+        mfx: { switch: 1, algo: 11, outvol: 100, revsend: 40, p1: 64, p2: 64, p3: 64, p4: 64 }
+      }
+    };
+
+    Object.keys(PAD_OFFSETS).forEach(p => {
+      currentKit.pads[p] = {
+        inst: DEFAULT_KIT_SOUNDS[p] !== undefined ? DEFAULT_KIT_SOUNDS[p] : 8,
+        level: 100, pitch: 0, pan: 64, decay: 0, reverb: 40, mfx: 1,
+        note: null
+      };
+    });
+
+    let currentPad = 'A1';
+    let midiAccess = null;
+    let selectedOutput = null;
+    let selectedInput = null;
+    let userSetsDirectory = localStorage.getItem('hpd15_v2_sets_dir') || "";
+
+    const logEl = document.getElementById('log');
+    function log(msg) {
+      logEl.innerHTML += `<div>&gt; ${msg}</div>`;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    document.getElementById('btnToggleLog').onclick = () => {
+      const btn = document.getElementById('btnToggleLog');
+      if (logEl.classList.contains('hidden')) {
+        logEl.classList.remove('hidden');
+        btn.textContent = "Masquer";
+      } else {
+        logEl.classList.add('hidden');
+        btn.textContent = "Afficher";
+      }
+    };
+
+    window.switchTab = function(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => {
+        c.classList.remove('active');
+        c.style.display = 'none';
+      });
+
+      const overviewCard = document.getElementById('overview-card');
+
+      if (tabId === 'tab-editor') {
+        document.getElementById('btnTabEditor').classList.add('active');
+        overviewCard.style.display = 'block';
+      }
+      if (tabId === 'tab-effects') {
+        document.getElementById('btnTabEffects').classList.add('active');
+        overviewCard.style.display = 'block';
+      }
+      if (tabId === 'tab-librarian') {
+        document.getElementById('btnTabLibrarian').classList.add('active');
+        overviewCard.style.display = 'none';
+        refreshSetsTable();
+      }
+
+      const target = document.getElementById(tabId);
+      target.classList.add('active');
+      target.style.display = (tabId === 'tab-librarian') ? 'flex' : 'grid';
+    };
+
+    function calcChecksum(bytes) {
+      const sum = bytes.reduce((acc, b) => acc + b, 0);
+      return (128 - (sum % 128)) % 128;
+    }
+
+    function sendSysEx(baseMSB, base2nd, blockOffset, paramOffset, dataArray) {
+      if (!selectedOutput) return;
+      const addr = [baseMSB, base2nd, blockOffset, paramOffset];
+      const payload = [...addr, ...dataArray];
+      const cs = calcChecksum(payload);
+      const syx = [0xF0, 0x41, 0x10, 0x00, 0x2E, 0x12, ...payload, cs, 0xF7];
+      selectedOutput.send(syx);
+    }
+
+    function sendTempSysEx(blockOffset, paramOffset, dataArray) {
+      sendSysEx(0x01, 0x00, blockOffset, paramOffset, dataArray);
+    }
+
+    function requestData(baseMSB, base2nd, blockOffset, paramOffset, sizeArray) {
+      if (!selectedOutput) return;
+      const addr = [baseMSB, base2nd, blockOffset, paramOffset];
+      const payload = [...addr, ...sizeArray];
+      const cs = calcChecksum(payload);
+      const syx = [0xF0, 0x41, 0x10, 0x00, 0x2E, 0x11, ...payload, cs, 0xF7];
+      selectedOutput.send(syx);
+    }
+
+    // --- SYNCHRONISATION HAUTE FIABILITÉ (250ms par pad) ---
+    function syncFromHPD() {
+      if (!selectedOutput) {
+        log("<span style='color:#f85149;'>Erreur : sortie MIDI non connectée.</span>");
+        return;
+      }
+      log("Interrogation complète du kit (18 zones - mode sécurisé 250ms)...");
+
+      const padKeys = Object.keys(PAD_OFFSETS);
+      
+      // Espacement sécurisé à 250ms pour éliminer toute perte de paquets
+      padKeys.forEach((pid, idx) => {
+        setTimeout(() => {
+          requestData(0x01, 0x00, PAD_OFFSETS[pid], 0x00, [0x00, 0x00, 0x00, 0x10]);
+        }, idx * 250);
+      });
+
+      // Interrogation des effets à la fin du balayage des pads
+      setTimeout(() => {
+        requestData(0x01, 0x00, 0x30, 0x00, [0x00, 0x00, 0x00, 0x10]);
+        log("Synchronisation des 18 zones et effets terminée.");
+      }, padKeys.length * 250 + 300);
+    }
+
+    document.getElementById('btnSyncFromHPD').onclick = syncFromHPD;
+
+    function sendTempoSysEx(bpm) {
+      const val = Math.min(Math.max(parseInt(bpm) || 120, 20), 260);
+      currentKit.tempo = val;
+      document.getElementById('headerTempo').value = val;
+      document.getElementById('setTempoInput').value = val;
+      sendTempSysEx(0x00, 0x00, [val]);
+      log(`Tempo ajusté : ${val} BPM`);
+    }
+
+    document.getElementById('headerTempo').onchange = (e) => sendTempoSysEx(e.target.value);
+    document.getElementById('setTempoInput').onchange = (e) => sendTempoSysEx(e.target.value);
+
+    // --- SÉLECTEUR DE KITS AVEC DÉLAI ÉLARGI À 1000ms ---
+    function setupPatchSelectors() {
+      const typeSel = document.getElementById('selPatchType');
+      const grpSel = document.getElementById('selPatchGroup');
+      const itemSel = document.getElementById('selPatchItem');
+
+      function populateGroups() {
+        grpSel.innerHTML = '';
+        PRESET_GROUPS.forEach(g => {
+          const opt = document.createElement('option');
+          opt.value = g.id;
+          opt.textContent = `${g.id}. ${g.name}`;
+          grpSel.appendChild(opt);
+        });
+        populateItems();
+      }
+
+      function populateItems() {
+        itemSel.innerHTML = '';
+        const isUser = typeSel.value === 'USER';
+        const grpId = parseInt(grpSel.value);
+        const grp = PRESET_GROUPS.find(g => g.id === grpId);
+
+        if (isUser) {
+          for (let i = 1; i <= 8; i++) {
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.textContent = `Kit U${grpId.toString().padStart(2,'0')}-${i.toString().padStart(2,'0')}`;
+            itemSel.appendChild(opt);
+          }
+        } else if (grp) {
+          grp.patches.forEach((name, idx) => {
+            const opt = document.createElement('option');
+            opt.value = idx + 1;
+            opt.textContent = `${idx + 1}. ${name}`;
+            itemSel.appendChild(opt);
+          });
+        }
+      }
+
+      typeSel.onchange = populateItems;
+      grpSel.onchange = populateItems;
+      populateGroups();
+
+      document.getElementById('btnLoadPatch').onclick = () => {
+        const isUser = typeSel.value === 'USER';
+        const grpId = parseInt(grpSel.value);
+        const itemIdx = parseInt(itemSel.value);
+        const patchName = itemSel.options[itemSel.selectedIndex].text.replace(/^[0-9]+\.\s*/, '');
+
+        if (selectedOutput) {
+          let bankMSB = 0;
+          let progNum = 0;
+
+          if (isUser) {
+            bankMSB = 0x00;
+            progNum = (grpId - 1) * 8 + (itemIdx - 1);
+          } else {
+            let globalPresetIdx = 0;
+            for (let i = 0; i < grpId - 1; i++) {
+              globalPresetIdx += PRESET_GROUPS[i].count;
+            }
+            globalPresetIdx += (itemIdx - 1);
+            bankMSB = (globalPresetIdx < 128) ? 0x01 : 0x02;
+            progNum = (globalPresetIdx < 128) ? globalPresetIdx : (globalPresetIdx - 128);
+          }
+
+          [9, 0].forEach(ch => {
+            selectedOutput.send([0xB0 | ch, 0x00, bankMSB]);
+            selectedOutput.send([0xB0 | ch, 0x20, 0x00]);
+            selectedOutput.send([0xC0 | ch, progNum]);
+          });
+          log(`Changement de preset : <b>${patchName}</b>`);
+        }
+
+        document.getElementById('setNameInput').value = patchName;
+        currentKit.name = patchName;
+
+        // Attendre 1000ms que le HPD-15 ait fini de basculer son kit avant d'interroger la mémoire
+        setTimeout(() => {
+          syncFromHPD();
+        }, 1000);
+      };
+    }
+
+    function getInstInfo(instId) {
+      if (instId >= 0 && instId < ALL_INSTRUMENTS.length) {
+        return ALL_INSTRUMENTS[instId];
+      }
+      return { code: "---", name: "Inconnu (" + instId + ")", cat: "-" };
+    }
+
+    function renderOverview() {
+      const tbodyLeft = document.getElementById('overviewTbodyLeft');
+      const tbodyRight = document.getElementById('overviewTbodyRight');
+      tbodyLeft.innerHTML = '';
+      tbodyRight.innerHTML = '';
+
+      const leftPads = ['A1','A2','A3','A4','A5','B1','B2','B3','B4'];
+      const rightPads = ['B5','C1','C2','C3','C4','C5','RL','RR','DB'];
+
+      function buildRow(pid) {
+        const p = currentKit.pads[pid];
+        const info = getInstInfo(p.inst);
+        const tr = document.createElement('tr');
+        if (pid === currentPad) tr.classList.add('active-row');
+
+        const panStr = p.pan === 64 ? "C" : (p.pan < 64 ? "L" + (64 - p.pan) : "R" + (p.pan - 64));
+        const pitchStr = (p.pitch > 0 ? "+" : "") + p.pitch;
+
+        tr.innerHTML = `
+          <td><b>${pid}</b></td>
+          <td><b>${info.code}</b></td>
+          <td>${info.name}</td>
+          <td>${p.level}</td>
+          <td>${panStr}</td>
+          <td>${pitchStr}</td>
+          <td>${p.reverb}</td>
+          <td>${p.mfx ? '<span style="color:var(--accent);">ON</span>' : 'OFF'}</td>
+        `;
+        tr.onclick = () => selectPad(pid, "ui");
+        return tr;
+      }
+
+      leftPads.forEach(pid => tbodyLeft.appendChild(buildRow(pid)));
+      rightPads.forEach(pid => tbodyRight.appendChild(buildRow(pid)));
+    }
+
+    function populateInstruments() {
+      const select = document.getElementById('ctrl-inst');
+      const filterCat = document.getElementById('instCategoryFilter').value;
+      const search = document.getElementById('instSearch').value.toLowerCase();
+      select.innerHTML = '';
+
+      ALL_INSTRUMENTS.forEach(inst => {
+        if (filterCat !== "ALL" && inst.cat !== filterCat) return;
+        if (search && !inst.name.toLowerCase().includes(search) && !inst.code.toLowerCase().includes(search)) return;
+
+        const opt = document.createElement('option');
+        opt.value = inst.id;
+        opt.textContent = `[${inst.code}] ${inst.name} (${inst.cat})`;
+        if (inst.id === currentKit.pads[currentPad].inst) opt.selected = true;
+        select.appendChild(opt);
+      });
+    }
+
+    document.getElementById('instCategoryFilter').onchange = populateInstruments;
+    document.getElementById('instSearch').oninput = populateInstruments;
+
+    const mfxSelect = document.getElementById('fx-mfx-algo');
+    MFX_ALGORITHMS.forEach((algo, idx) => {
+      const opt = document.createElement('option');
+      opt.value = idx;
+      opt.textContent = `${idx + 1}. ${algo}`;
+      if (idx === 11) opt.selected = true;
+      mfxSelect.appendChild(opt);
+    });
+
+    function selectPad(padId, triggerSource = "ui") {
+      if (!PAD_OFFSETS[padId]) return;
+      currentPad = padId;
+
+      document.querySelectorAll('.selected').forEach(s => s.classList.remove('selected'));
+      const el = document.getElementById('pad-' + padId);
+      if (el) {
+        el.classList.add('selected');
+        if (triggerSource === "midi") {
+          el.classList.add('hit-flash');
+          setTimeout(() => el.classList.remove('hit-flash'), 120);
+        }
+      }
+      document.getElementById('currentPadTitle').textContent = 'PAD ' + padId;
+
+      const p = currentKit.pads[padId];
+      document.getElementById('ctrl-level').value = p.level;
+      document.getElementById('val-level').textContent = p.level;
+
+      document.getElementById('ctrl-pitch').value = p.pitch;
+      document.getElementById('val-pitch').textContent = (p.pitch > 0 ? "+" : "") + p.pitch + " cents";
+
+      document.getElementById('ctrl-pan').value = p.pan;
+      document.getElementById('val-pan').textContent = p.pan === 64 ? "Center" : (p.pan < 64 ? "L" + (64 - p.pan) : "R" + (p.pan - 64));
+
+      document.getElementById('ctrl-decay').value = p.decay;
+      document.getElementById('val-decay').textContent = (p.decay > 0 ? "+" : "") + p.decay;
+
+      document.getElementById('ctrl-reverb').value = p.reverb;
+      document.getElementById('val-reverb').textContent = p.reverb;
+
+      document.getElementById('ctrl-mfx').value = p.mfx;
+      document.getElementById('val-mfx').textContent = p.mfx === 1 ? "ON" : "OFF";
+
+      populateInstruments();
+      renderOverview();
+      if (triggerSource === "ui") log(`Pad actif : ${padId}`);
+    }
+
+    function handleMIDIMessage(e) {
+      const data = e.data;
+      const status = data[0];
+      const cmd = status >> 4;
+      if (status === 0xFE) return;
+
+      if (status === 0xF0 && data[1] === 0x41 && data[5] === 0x12) {
+        const addr2 = data[8];
+        const paramOff = data[9];
+        const payload = data.slice(10, data.length - 2);
+
+        const targetPad = Object.keys(PAD_OFFSETS).find(k => PAD_OFFSETS[k] === addr2);
+        if (targetPad && paramOff === 0x00 && payload.length >= 10) {
+          const instVal = (payload[0] << 12) | (payload[1] << 8) | (payload[2] << 4) | payload[3];
+          const pitchVal = ((payload[4] << 12) | (payload[5] << 8) | (payload[6] << 4) | payload[7]) - 2400;
+          const levelVal = payload[8];
+          const panVal = payload.length > 10 ? ((payload[9] << 4) | payload[10]) : payload[9];
+          const decayVal = payload.length > 11 ? (payload[11] - 31) : 0;
+          const assignedNote = payload.length > 12 ? payload[12] : null;
+          const reverbVal = payload.length > 14 ? payload[14] : 40;
+          const mfxVal = payload.length > 15 ? payload[15] : 1;
+
+          currentKit.pads[targetPad].inst = instVal;
+          currentKit.pads[targetPad].pitch = pitchVal;
+          currentKit.pads[targetPad].level = levelVal;
+          currentKit.pads[targetPad].pan = panVal;
+          currentKit.pads[targetPad].decay = decayVal;
+          currentKit.pads[targetPad].reverb = reverbVal;
+          currentKit.pads[targetPad].mfx = mfxVal;
+          currentKit.pads[targetPad].note = assignedNote;
+
+          if (assignedNote) NOTE_TO_PAD[assignedNote] = targetPad;
+
+          if (targetPad === currentPad) selectPad(currentPad, "ui");
+          renderOverview();
+        }
+        return;
+      }
+
+      if (cmd === 0x9 && data[2] > 0) {
+        const note = data[1];
+        let hitPad = NOTE_TO_PAD[note];
+
+        if (!hitPad) {
+          hitPad = Object.keys(currentKit.pads).find(p => currentKit.pads[p].note === note);
+        }
+
+        if (hitPad) {
+          selectPad(hitPad, "midi");
+          log(`Frappe détectée : ${hitPad} (Note ${note})`);
+        } else {
+          log(`Note On (#${note}) non assignée`);
+          const el = document.getElementById('pad-' + currentPad);
+          if (el) {
+            el.classList.add('hit-flash');
+            setTimeout(() => el.classList.remove('hit-flash'), 100);
+          }
+        }
+      }
+      else if (cmd === 0xA) {
+        const hitPad = NOTE_TO_PAD[data[1]];
+        if (hitPad) selectPad(hitPad, "midi");
+      }
+      else if (cmd === 0xB) {
+        const ccNum = data[1];
+        const ccVal = data[2];
+
+        if (ccNum === 82 || (ccNum === 16 && currentPad === 'RL')) {
+          selectPad('RL', "midi");
+        } else if (ccNum === 83 || (ccNum === 17 && currentPad === 'RR')) {
+          selectPad('RR', "midi");
+        } else if (ccNum === 81) {
+          selectPad('DB', "midi");
+        } else if (ccNum === 11) {
+          currentKit.pads[currentPad].level = ccVal;
+          document.getElementById('ctrl-level').value = ccVal;
+          document.getElementById('val-level').textContent = ccVal;
+          renderOverview();
+        } else if (ccNum === 10) {
+          currentKit.pads[currentPad].pan = ccVal;
+          document.getElementById('ctrl-pan').value = ccVal;
+          document.getElementById('val-pan').textContent = ccVal === 64 ? "Center" : (ccVal < 64 ? "L" + (64 - ccVal) : "R" + (ccVal - 64));
+          renderOverview();
+        }
+      }
+      else if (cmd === 0xE) {
+        const bendVal = ((data[2] << 7) | data[1]) - 8192;
+        const cents = Math.round((bendVal / 8192) * 2400);
+        currentKit.pads[currentPad].pitch = cents;
+        document.getElementById('ctrl-pitch').value = cents;
+        document.getElementById('val-pitch').textContent = (cents > 0 ? "+" : "") + cents + " cents";
+        renderOverview();
+      }
+    }
+
+    async function initMIDI() {
+      try {
+        midiAccess = await navigator.requestMIDIAccess({ sysex: true });
+        log("Moteur Web MIDI connecté.");
+
+        const outSelect = document.getElementById('midiOutSelect');
+        const inSelect = document.getElementById('midiInSelect');
+        outSelect.innerHTML = ''; inSelect.innerHTML = '';
+
+        Array.from(midiAccess.outputs.values()).forEach(out => {
+          const opt = document.createElement('option');
+          opt.value = out.id; opt.textContent = out.name;
+          if (out.name.includes("UM-ONE")) opt.selected = true;
+          outSelect.appendChild(opt);
+        });
+
+        Array.from(midiAccess.inputs.values()).forEach(inp => {
+          const opt = document.createElement('option');
+          opt.value = inp.id; opt.textContent = inp.name;
+          if (inp.name.includes("UM-ONE")) opt.selected = true;
+          inSelect.appendChild(opt);
+        });
+
+        updateSelectedPorts();
+      } catch (err) {
+        log(`<span style='color:#f85149;'>Erreur Web MIDI : ${err.message}</span>`);
+      }
+    }
+
+    function updateSelectedPorts() {
+      const outId = document.getElementById('midiOutSelect').value;
+      const inId = document.getElementById('midiInSelect').value;
+
+      if (midiAccess && outId) {
+        selectedOutput = midiAccess.outputs.get(outId);
+        log(`Sortie MIDI : <b>${selectedOutput.name}</b>`);
+      }
+      if (midiAccess && inId) {
+        if (selectedInput) selectedInput.onmidimessage = null;
+        selectedInput = midiAccess.inputs.get(inId);
+        selectedInput.onmidimessage = handleMIDIMessage;
+        log(`Entrée MIDI : <b>${selectedInput.name}</b>`);
+      }
+    }
+
+    document.getElementById('midiOutSelect').onchange = updateSelectedPorts;
+    document.getElementById('midiInSelect').onchange = updateSelectedPorts;
+    document.getElementById('btnInitMidi').onclick = initMIDI;
+
+    document.querySelectorAll('.pad-sector, .ribbon-rect, .dbeam-area').forEach(el => {
+      el.addEventListener('click', () => selectPad(el.id.replace('pad-', ''), "ui"));
+    });
+
+    function setupPadControl(sliderId, labelId, paramOffset, key, formatter, computeBytes) {
+      const slider = document.getElementById(sliderId);
+      const label = document.getElementById(labelId);
+
+      const apply = (val) => {
+        currentKit.pads[currentPad][key] = val;
+        slider.value = val;
+        label.textContent = formatter(val);
+        sendTempSysEx(PAD_OFFSETS[currentPad], paramOffset, computeBytes(val));
+        renderOverview();
+      };
+
+      slider.addEventListener('input', (e) => apply(parseInt(e.target.value)));
+      slider.addEventListener('dblclick', () => apply(parseInt(slider.getAttribute('data-default'))));
+    }
+
+    setupPadControl('ctrl-level', 'val-level', 0x08, 'level', v => v, v => [v]);
+    setupPadControl('ctrl-pitch', 'val-pitch', 0x04, 'pitch', v => (v > 0 ? "+" : "") + v + " cents", v => {
+      const r = v + 2400;
+      return [(r >> 12) & 0x0F, (r >> 8) & 0x0F, (r >> 4) & 0x0F, r & 0x0F];
+    });
+    setupPadControl('ctrl-pan', 'val-pan', 0x09, 'pan', v => (v === 64 ? "Center" : (v < 64 ? "L" + (64 - v) : "R" + (v - 64))), v => [(v >> 4) & 0x0F, v & 0x0F]);
+    setupPadControl('ctrl-decay', 'val-decay', 0x0B, 'decay', v => (v > 0 ? "+" : "") + v, v => [v + 31]);
+    setupPadControl('ctrl-reverb', 'val-reverb', 0x0E, 'reverb', v => v, v => [v]);
+
+    document.getElementById('ctrl-mfx').onchange = (e) => {
+      const val = parseInt(e.target.value);
+      currentKit.pads[currentPad].mfx = val;
+      document.getElementById('val-mfx').textContent = val === 1 ? "ON" : "OFF";
+      sendTempSysEx(PAD_OFFSETS[currentPad], 0x0F, [val]);
+      renderOverview();
+    };
+
+    document.getElementById('ctrl-inst').onchange = (e) => {
+      const val = parseInt(e.target.value);
+      currentKit.pads[currentPad].inst = val;
+      sendTempSysEx(PAD_OFFSETS[currentPad], 0x00, [(val >> 12) & 0x0F, (val >> 8) & 0x0F, (val >> 4) & 0x0F, val & 0x0F]);
+      renderOverview();
+    };
+
+    document.getElementById('fx-reverb-algo').onchange = (e) => {
+      const val = parseInt(e.target.value);
+      currentKit.effects.reverb.algo = val;
+      sendTempSysEx(0x30, 0x02, [val]);
+    };
+    function setupFxControl(sliderId, labelId, offset, key, subkey) {
+      const slider = document.getElementById(sliderId);
+      const label = document.getElementById(labelId);
+      const apply = (val) => {
+        currentKit.effects[key][subkey] = val;
+        slider.value = val;
+        label.textContent = val;
+        sendTempSysEx(0x30, offset, [val]);
+      };
+      slider.addEventListener('input', (e) => apply(parseInt(e.target.value)));
+      slider.addEventListener('dblclick', () => apply(parseInt(slider.getAttribute('data-default'))));
+    }
+    setupFxControl('fx-rev-level', 'val-fx-rev-level', 0x03, 'reverb', 'level');
+    setupFxControl('fx-rev-time', 'val-fx-rev-time', 0x04, 'reverb', 'time');
+    setupFxControl('fx-rev-feedback', 'val-fx-rev-feedback', 0x06, 'reverb', 'feedback');
+    document.getElementById('fx-rev-hfdamp').onchange = (e) => {
+      const val = parseInt(e.target.value);
+      currentKit.effects.reverb.hfdamp = val;
+      sendTempSysEx(0x30, 0x05, [val]);
+    };
+
+    document.getElementById('fx-mfx-switch').onchange = (e) => {
+      const val = parseInt(e.target.value);
+      currentKit.effects.mfx.switch = val;
+      sendTempSysEx(0x40, 0x08, [val]);
+      log(`Interrupteur global Multi-FX : ${val ? 'ON' : 'OFF'}`);
+    };
+
+    document.getElementById('fx-mfx-algo').onchange = (e) => {
+      const val = parseInt(e.target.value);
+      currentKit.effects.mfx.algo = val;
+      sendTempSysEx(0x30, 0x09, [val]);
+    };
+    setupFxControl('fx-mfx-outvol', 'val-fx-mfx-outvol', 0x0A, 'mfx', 'outvol');
+    setupFxControl('fx-mfx-revsend', 'val-fx-mfx-revsend', 0x0B, 'mfx', 'revsend');
+    setupFxControl('fx-mfx-p1', 'val-fx-mfx-p1', 0x0C, 'mfx', 'p1');
+    setupFxControl('fx-mfx-p2', 'val-fx-mfx-p2', 0x0D, 'mfx', 'p2');
+    setupFxControl('fx-mfx-p3', 'val-fx-mfx-p3', 0x0E, 'mfx', 'p3');
+    setupFxControl('fx-mfx-p4', 'val-fx-mfx-p4', 0x0F, 'mfx', 'p4');
+
+    function transmitKitToTemporary() {
+      sendTempoSysEx(currentKit.tempo || 120);
+
+      const padIds = Object.keys(PAD_OFFSETS);
+      padIds.forEach((p, idx) => {
+        setTimeout(() => {
+          const pd = currentKit.pads[p];
+          const off = PAD_OFFSETS[p];
+          sendTempSysEx(off, 0x00, [(pd.inst >> 12) & 0x0F, (pd.inst >> 8) & 0x0F, (pd.inst >> 4) & 0x0F, pd.inst & 0x0F]);
+          sendTempSysEx(off, 0x08, [pd.level]);
+          sendTempSysEx(off, 0x04, [((pd.pitch + 2400) >> 12) & 0x0F, ((pd.pitch + 2400) >> 8) & 0x0F, ((pd.pitch + 2400) >> 4) & 0x0F, (pd.pitch + 2400) & 0x0F]);
+          sendTempSysEx(off, 0x09, [(pd.pan >> 4) & 0x0F, pd.pan & 0x0F]);
+          sendTempSysEx(off, 0x0B, [pd.decay + 31]);
+          sendTempSysEx(off, 0x0E, [pd.reverb]);
+          sendTempSysEx(off, 0x0F, [pd.mfx]);
+        }, idx * 160);
+      });
+
+      setTimeout(() => {
+        sendTempSysEx(0x30, 0x02, [currentKit.effects.reverb.algo]);
+        sendTempSysEx(0x30, 0x03, [currentKit.effects.reverb.level]);
+        sendTempSysEx(0x30, 0x04, [currentKit.effects.reverb.time]);
+        sendTempSysEx(0x30, 0x05, [currentKit.effects.reverb.hfdamp]);
+        sendTempSysEx(0x30, 0x06, [currentKit.effects.reverb.feedback]);
+
+        sendTempSysEx(0x40, 0x08, [currentKit.effects.mfx.switch]);
+        sendTempSysEx(0x30, 0x09, [currentKit.effects.mfx.algo]);
+        sendTempSysEx(0x30, 0x0A, [currentKit.effects.mfx.outvol]);
+        sendTempSysEx(0x30, 0x0B, [currentKit.effects.mfx.revsend]);
+        sendTempSysEx(0x30, 0x0C, [currentKit.effects.mfx.p1]);
+        sendTempSysEx(0x30, 0x0D, [currentKit.effects.mfx.p2]);
+        sendTempSysEx(0x30, 0x0E, [currentKit.effects.mfx.p3]);
+        sendTempSysEx(0x30, 0x0F, [currentKit.effects.mfx.p4]);
+      }, padIds.length * 160 + 100);
+    }
+
+    const notesInput = document.getElementById('setNotesInput');
+    const notesCount = document.getElementById('notesCharCount');
+    notesInput.oninput = () => {
+      notesCount.textContent = notesInput.value.length;
+      currentKit.notes = notesInput.value;
+    };
+
+    document.getElementById('setNameInput').oninput = (e) => {
+      currentKit.name = e.target.value;
+    };
+
+    function initDirectoryManager() {
+      if (userSetsDirectory) {
+        document.getElementById('libDirPath').value = userSetsDirectory;
+      }
+    }
+
+    document.getElementById('btnBrowseDir').onclick = async () => {
+      if (!ipcRenderer) return;
+      const dir = await ipcRenderer.invoke('select-directory');
+      if (dir) {
+        userSetsDirectory = dir;
+        localStorage.setItem('hpd15_v2_sets_dir', dir);
+        document.getElementById('libDirPath').value = dir;
+        refreshSetsTable();
+      }
+    };
+
+    function saveCurrentKitToFile(filePath) {
+      currentKit.name = document.getElementById('setNameInput').value.trim() || "Sans_Titre";
+      currentKit.tempo = parseInt(document.getElementById('setTempoInput').value) || 120;
+      currentKit.notes = document.getElementById('setNotesInput').value;
+
+      fs.writeFileSync(filePath, JSON.stringify(currentKit, null, 2), 'utf-8');
+      log(`[FICHIER] Set sauvegardé dans : ${path.basename(filePath)}`);
+      alert(`Set enregistré avec succès !\nFichier : ${path.basename(filePath)}`);
+      refreshSetsTable();
+    }
+
+    document.getElementById('btnSaveSetLocal').onclick = () => {
+      if (!userSetsDirectory || !fs) {
+        alert("Veuillez d'abord sélectionner un répertoire de travail.");
+        return;
+      }
+      const name = document.getElementById('setNameInput').value.trim() || "Sans_Titre";
+      const safeName = name.replace(/[^a-z0-9_\-]/gi, '_').toLowerCase();
+      const filePath = path.join(userSetsDirectory, `${safeName}.json`);
+
+      if (fs.existsSync(filePath)) {
+        const confirmOverwrite = confirm(`Le fichier "${safeName}.json" existe déjà dans ce répertoire.\n\nVoulez-vous écraser son contenu ?`);
+        if (!confirmOverwrite) {
+          log(`[ANNULATION] Sauvegarde abandonnée.`);
+          return;
+        }
+      }
+      saveCurrentKitToFile(filePath);
+    };
+
+    document.getElementById('btnSaveAsNative').onclick = async () => {
+      if (!ipcRenderer) return;
+      const defaultName = (document.getElementById('setNameInput').value.trim() || "Set_HPD15") + ".json";
+      const targetPath = await ipcRenderer.invoke('show-save-dialog', defaultName);
+      if (targetPath) {
+        saveCurrentKitToFile(targetPath);
+      }
+    };
+
+    document.getElementById('btnOpenNative').onclick = async () => {
+      if (!ipcRenderer) return;
+      const targetPath = await ipcRenderer.invoke('show-open-dialog');
+      if (targetPath) {
+        loadSetFromFilePath(targetPath);
+      }
+    };
+
+    function refreshSetsTable() {
+      if (!userSetsDirectory || !fs || !fs.existsSync(userSetsDirectory)) return;
+      const tbody = document.getElementById('setsTableBody');
+      tbody.innerHTML = '';
+
+      const files = fs.readdirSync(userSetsDirectory).filter(f => f.toLowerCase().endsWith('.json'));
+      if (files.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-dim);">Aucun fichier de Set (.json) trouvé dans ce dossier.</td></tr>`;
+        return;
+      }
+
+      files.forEach(file => {
+        try {
+          const fullPath = path.join(userSetsDirectory, file);
+          const raw = fs.readFileSync(fullPath, 'utf-8');
+          const data = JSON.parse(raw);
+
+          const instList = Object.values(data.pads || {})
+            .map(p => getInstInfo(p.inst).name)
+            .filter((v, i, a) => v && a.indexOf(v) === i)
+            .slice(0, 3)
+            .join(', ');
+
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><strong>${data.name || file}</strong></td>
+            <td><span style="color:var(--accent); font-weight:600;">${data.tempo || 120} BPM</span></td>
+            <td style="color:var(--text-dim);">${data.notes ? (data.notes.slice(0, 60) + (data.notes.length > 60 ? '...' : '')) : '—'}</td>
+            <td>${instList || '—'}</td>
+            <td style="text-align:center;"><button onclick="loadSetFromLibrary('${file.replace(/'/g, "\\'")}')" style="font-size:11px; padding:3px 8px;">Charger</button></td>
+          `;
+          tbody.appendChild(tr);
+        } catch (e) {
+          console.error("Erreur lecture set :", file, e);
+        }
+      });
+    }
+
+    document.getElementById('btnRefreshLib').onclick = refreshSetsTable;
+
+    function loadSetFromFilePath(fullPath) {
+      if (!fs) return;
+      const raw = fs.readFileSync(fullPath, 'utf-8');
+      const data = JSON.parse(raw);
+
+      currentKit.name = data.name || path.basename(fullPath, '.json');
+      currentKit.tempo = data.tempo || 120;
+      currentKit.notes = data.notes || "";
+      if (data.pads) Object.assign(currentKit.pads, data.pads);
+      if (data.effects) Object.assign(currentKit.effects, data.effects);
+
+      document.getElementById('setNameInput').value = currentKit.name;
+      document.getElementById('setTempoInput').value = currentKit.tempo;
+      document.getElementById('headerTempo').value = currentKit.tempo;
+      document.getElementById('setNotesInput').value = currentKit.notes;
+      notesCount.textContent = currentKit.notes.length;
+
+      selectPad(currentPad, "ui");
+      renderOverview();
+
+      log(`Application du set "${currentKit.name}" au HPD-15...`);
+      transmitKitToTemporary();
+      log(`Set appliqué avec succès au HPD-15.`);
+      switchTab('tab-editor');
+    }
+
+    window.loadSetFromLibrary = function(filename) {
+      if (!userSetsDirectory) return;
+      loadSetFromFilePath(path.join(userSetsDirectory, filename));
+    };
+
+    window.addEventListener('load', () => {
+      initMIDI();
+      setupPatchSelectors();
+      initDirectoryManager();
+      selectPad('A1');
+      renderOverview();
+    });
+  </script>
+</body>
+</html>
